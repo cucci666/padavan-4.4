@@ -1,8 +1,40 @@
-# 可选：修改 RM2100 配置文件
-# vi trunk/configs/templates/RM2100.config
+name: build
 
-# 开始编译
-make RM2100
-
-# 为其他设备编译时，清理上一次的构建
-make clean
+on: 
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        description: 'Please select the model to compile'
+        options:
+        - 'RM2100'
+        default: 'RM2100'
+      release:
+        type: boolean
+        description: 'Upload to release'
+        default: 'true'
+jobs:
+  build:
+    name: ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Prepare environment
+        run: |
+          sudo apt update
+          sudo apt install libtool-bin gperf python3-docutils autopoint gettext ccache
+      - name: Start Build
+        run: |
+          make RM2100
+          echo "TAG_NAME=$(date +%Y%m%d)" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v3
+        with:
+          name: RM2100-${{ env.TAG_NAME }}
+          path: trunk/images/*.trx
+      - uses: ncipollo/release-action@v1
+        if: github.event.inputs.release == 'true'
+        with:
+          commit: ${{ github.sha }}
+          tag: ${{ env.TAG_NAME }}
+          artifacts: trunk/images/*.trx
+          allowUpdates: true
