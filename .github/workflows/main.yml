@@ -1,0 +1,8 @@
+# 可选：修改 RM2100 配置文件
+# vi trunk/configs/templates/RM2100.config
+
+# 开始编译
+make RM2100
+
+# 为其他设备编译时，清理上一次的构建
+make clean
