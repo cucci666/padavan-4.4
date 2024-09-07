@@ -1,66 +1,47 @@
-TOPDIR:=${CURDIR}
-SOURCE_DIR:=$(TOPDIR)/trunk
-TOOLCHAIN_DIR:=$(TOPDIR)/toolchain-mipsel
-TOOLCHAIN_ROOT:=$(TOOLCHAIN_DIR)/toolchain-4.4.x
-TOOLCHAIN_URL:=https://github.com/simonchen/padavan-4.4/releases/download/toolchain/mipsel-linux-uclibc-gcc10.tar.xz
-TEMPLATE_DIR:=$(SOURCE_DIR)/configs/templates
-PRODUCTS:=$(shell ls $(TEMPLATE_DIR) | sed 's/.config//g')
-CONFIG:=$(SOURCE_DIR)/.config
+name: build
 
-# 启用 LTO 支持
-CFLAGS += -flto
-CXXFLAGS += -flto
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        type: choice
+        description: 'Please select the model to compile'
+        options:
+        - 'RM2100'
+        default: 'RM2100'
+      release:
+        type: boolean
+        description: 'Upload to release'
+        default: 'true'
 
-all: build
+jobs:
+  build:
+    name: ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-toolchain/build:
-	@echo "Building toolchain..."
-	@(cd $(TOOLCHAIN_DIR); \
-		./bootstrap && \
-		./configure --enable-local && \
-		make && \
-		./ct-ng mipsel-linux-uclibc && \
-		./ct-ng build \
-	)
+      - name: Prepare environment
+        run: |
+          sudo apt update
+          sudo apt install libtool-bin gperf python3-docutils autopoint gettext ccache
 
-toolchain/clean:
-	@(cd $(TOOLCHAIN_DIR); \
-		if [ -f ct-ng ]; then ./ct-ng distclean; fi; \
-		if [ -f Makefile ]; then make distclean; fi; \
-		if [ -d $(TOOLCHAIN_ROOT) ]; then rm -rf $(TOOLCHAIN_ROOT); fi \
-	)
+      - name: Add LTO support and Start Build
+        run: |
+          export CFLAGS="$CFLAGS -flto"
+          export CXXFLAGS="$CXXFLAGS -flto"
+          make ${{ inputs.target }}
+          echo "TAG_NAME=$(date +%Y%m%d)" >> $GITHUB_ENV
 
-toolchain/download:
-	@if [ ! -d $(TOOLCHAIN_ROOT) ]; then \
-		echo "Downloading toolchain..."; \
-		mkdir -p $(TOOLCHAIN_ROOT); \
-		curl -fSsLo- $(TOOLCHAIN_URL) | tar Jx -C $(TOOLCHAIN_ROOT); \
-	fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.target }}-${{ env.TAG_NAME }}
+          path: trunk/images/*.trx
 
-build: toolchain/download
-	@if [ ! -f $(CONFIG) ]; then \
-		echo "Please run 'make PRODUCT_NAME' to start build!"; \
-		echo "Supported products: $(PRODUCTS)"; \
-		exit 1; \
-	fi
-	$(MAKE) -C $(SOURCE_DIR)
-	# 添加插件编译
-	$(MAKE) -C $(SOURCE_DIR)/user/shadowsocks
-	$(MAKE) -C $(SOURCE_DIR)/user/v2ray
-	$(MAKE) -C $(SOURCE_DIR)/user/trojan
-	$(MAKE) -C $(SOURCE_DIR)/user/xray
-
-clean:
-	@if [ ! -f $(CONFIG) ]; then \
-		echo "Project config file .config not found! Terminate."; \
-		exit 1; \
-	fi
-	$(MAKE) -C $(SOURCE_DIR) clean
-	@rm -f $(CONFIG)
-
-.PHONY: $(PRODUCTS)
-$(PRODUCTS):
-	cp -f $(TEMPLATE_DIR)/$(@).config $(CONFIG)
-	@echo "CONFIG_CROSS_COMPILER_ROOT=$(TOOLCHAIN_ROOT)" >> $(CONFIG)
-	@echo "CONFIG_CCACHE=y" >> $(CONFIG)
-	@make build
+      - uses: ncipollo/release-action@v1
+        if: github.event.inputs.release == 'true'
+        with:
+          commit: ${{ github.sha }}
+          tag: ${{ env.TAG_NAME }}
+          artifacts: trunk/images/*.trx
+          allowUpdates: true
