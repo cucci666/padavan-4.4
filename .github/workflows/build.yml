@@ -19,18 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: hendrikmuhs/ccache-action@v1.2.3
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '^1.19.2'
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-v1
-          restore-keys: |
-            ${{ runner.os }}-go-
       - name: Prepare environment
         run: |
           sudo apt update
