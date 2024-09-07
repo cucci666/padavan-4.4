@@ -40,6 +40,11 @@ build: toolchain/download
 		exit 1; \
 	fi
 	$(MAKE) -C $(SOURCE_DIR)
+	# 添加插件编译
+	$(MAKE) -C $(SOURCE_DIR)/user/shadowsocks
+	$(MAKE) -C $(SOURCE_DIR)/user/v2ray
+	$(MAKE) -C $(SOURCE_DIR)/user/trojan
+	$(MAKE) -C $(SOURCE_DIR)/user/xray
 
 clean:
 	@if [ ! -f $(CONFIG) ]; then \
