@@ -26,10 +26,8 @@ jobs:
           sudo apt update
           sudo apt install libtool-bin gperf python3-docutils autopoint gettext ccache
 
-      - name: Add LTO support and Start Build
+      - name: Start Build (without LTO)
         run: |
-          export CFLAGS="$CFLAGS -flto"
-          export CXXFLAGS="$CXXFLAGS -flto"
           make ${{ inputs.target }}
           echo "TAG_NAME=$(date +%Y%m%d)" >> $GITHUB_ENV
 
