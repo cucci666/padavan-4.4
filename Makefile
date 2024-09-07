@@ -2,10 +2,14 @@ TOPDIR:=${CURDIR}
 SOURCE_DIR:=$(TOPDIR)/trunk
 TOOLCHAIN_DIR:=$(TOPDIR)/toolchain-mipsel
 TOOLCHAIN_ROOT:=$(TOOLCHAIN_DIR)/toolchain-4.4.x
-TOOLCHAIN_URL:=https://github.com/simonchen/padavan-4.4/releases/download/toolchain/mipsel-linux-uclibc-gcc10.tar.xz
+TOOLCHAIN_URL:=https://bitbucket.org/padavan/rt-n56u/downloads/toolchain-mipsel_4.4.7_uClibc-0.9.33.2.tar.xz
 TEMPLATE_DIR:=$(SOURCE_DIR)/configs/templates
 PRODUCTS:=$(shell ls $(TEMPLATE_DIR) | sed 's/.config//g')
 CONFIG:=$(SOURCE_DIR)/.config
+
+# 启用 LTO 支持
+CFLAGS += -flto
+CXXFLAGS += -flto
 
 all: build
 
